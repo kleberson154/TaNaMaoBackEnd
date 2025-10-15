@@ -3,21 +3,19 @@ import bcrypt from 'bcryptjs'
 
 // Interface do usuário
 export interface IUser extends Document {
+  name: string
   email: string
   password: string
-  firstName: string
-  lastName: string
-  phone: string
+  cpf: string
 }
 
 // Criação do schema
 const userSchema: Schema = new Schema(
   {
+    name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    phone: { type: String, required: true }
+    cpf: { type: String, required: true }
   },
   { timestamps: true }
 )
