@@ -1,3 +1,4 @@
+import { time } from 'console'
 import mongoose, { Document, Schema } from 'mongoose'
 
 export interface IProduto extends Document {
@@ -30,7 +31,8 @@ const produtoSchema: Schema = new Schema(
       {
         idUsuario: { type: mongoose.Types.ObjectId, required: true },
         nota: { type: Number, required: true },
-        comentario: { type: String, required: true }
+        comentario: { type: String, required: true },
+        time: { type: Date, default: Date.now }
       }
     ]
   },
