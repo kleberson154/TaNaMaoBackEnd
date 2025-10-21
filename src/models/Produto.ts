@@ -9,6 +9,11 @@ export interface IProduto extends Document {
   quantidade: number
   descricao: string
   imagemUrl: string
+  avaliacoes?: Array<{
+    idUsuario: mongoose.Types.ObjectId
+    nota: number
+    comentario: string
+  }>
 }
 
 const produtoSchema: Schema = new Schema(
@@ -20,7 +25,14 @@ const produtoSchema: Schema = new Schema(
     precoAluguel: { type: Number, required: true },
     quantidade: { type: Number, required: true },
     descricao: { type: String, required: true },
-    imagemUrl: { type: String, required: true }
+    imagemUrl: { type: String, required: true },
+    avaliacoes: [
+      {
+        idUsuario: { type: mongoose.Types.ObjectId, required: true },
+        nota: { type: Number, required: true },
+        comentario: { type: String, required: true }
+      }
+    ]
   },
   { timestamps: true }
 )
