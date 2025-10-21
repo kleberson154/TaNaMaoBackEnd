@@ -2,9 +2,8 @@ import { Response } from 'express'
 import { AuthRequest } from '../types/express'
 import User, { IUser } from '../models/User'
 import jwt from 'jsonwebtoken'
+import mongoose from 'mongoose'
 import Produto from '../models/Produto'
-import AvaliacaoProduto from '../models/AvaliacaoProduto'
-import UserCarrinho from '../models/UserCarrinho'
 
 class UserController {
   async register(req: AuthRequest, res: Response): Promise<Response | void> {
@@ -46,7 +45,7 @@ class UserController {
 
   async login(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
-      const { email, password } = req.body
+      const { email, senha } = req.body
       const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'
 
       const user = await User.findOne({ email })
@@ -55,7 +54,7 @@ class UserController {
         return
       }
 
-      const isMatch = await (user as any).comparePassword(password)
+      const isMatch = await (user as any).comparePassword(senha)
       if (!isMatch) {
         res.status(401).json({ error: 'Credenciais inválidas' })
         return
@@ -65,7 +64,7 @@ class UserController {
         expiresIn: '24h'
       })
 
-      const { password: _, ...safeUser } = user.toObject()
+      const { senha: _, ...safeUser } = user.toObject()
       res.status(200).json({ user: safeUser, token })
     } catch (error) {
       res.status(500).json({ error: 'Erro ao fazer login' })
@@ -79,11 +78,7 @@ class UserController {
         res.status(404).json({ error: 'Usuário não encontrado' })
         return
       }
-      let carrinho = await UserCarrinho.findOne({ idUsuario: user._id })
-      if (!carrinho) {
-        carrinho = new UserCarrinho({ idUsuario: user._id, produtos: [] })
-      }
-      res.status(200).json({ user, carrinho })
+      res.status(200).json({ user })
     } catch (error) {
       res.status(500).json({ error: 'Erro ao buscar dados do usuário' })
     }
@@ -91,13 +86,32 @@ class UserController {
 
   async getSearch(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
-      const { query } = req.params
+      // accept query from query string or route params
+      const rawQuery =
+        (req.query && (req.query.query as string)) ||
+        (req.params && (req.params.query as string)) ||
+        ''
+
+      const query = (rawQuery || '').trim()
+      if (!query) {
+        // no query provided -> return empty list
+        res.status(200).json({ produtos: [] })
+        return
+      }
+
+      // escape regex special characters to avoid invalid regex / security issues
+      const escapeRegex = (s: string) =>
+        s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+      const regex = new RegExp(escapeRegex(query), 'i')
+
       const produtos = await Produto.find({
-        nome: { $regex: query, $options: 'i' }
+        nome: { $regex: regex }
       })
       res.status(200).json({ produtos })
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao buscar produtos' })
+      const msg = (error as Error)?.message || String(error)
+      res.status(500).json({ error: 'Erro ao buscar produtos: ' + msg })
     }
   }
 
@@ -108,10 +122,7 @@ class UserController {
         res.status(404).json({ error: 'Produto não encontrado' })
         return
       }
-      const avaliacaoProduto = await AvaliacaoProduto.find({
-        idProduto: produto._id
-      })
-      res.status(200).json({ produto, avaliacaoProduto })
+      res.status(200).json({ produto })
     } catch (error) {
       res.status(500).json({ error: 'Erro ao buscar dados do produto' })
     }
@@ -121,16 +132,16 @@ class UserController {
     req: AuthRequest,
     res: Response
   ): Promise<Response | void> {
+    const idVendedor = req.user?.id
     try {
       const {
-        idVendedor,
         nome,
         categoria,
         precoCompra,
         precoAluguel,
         quantidade,
         descricao,
-        imagem
+        imagemUrl
       } = req.body
       const novoProduto = new Produto({
         idVendedor,
@@ -140,7 +151,7 @@ class UserController {
         precoAluguel,
         quantidade,
         descricao,
-        imagem
+        imagemUrl
       })
       await novoProduto.save()
       res.status(201).json({ produto: novoProduto })
@@ -154,14 +165,35 @@ class UserController {
     res: Response
   ): Promise<Response | void> {
     try {
-      const { idProduto, idUsuario, nota, comentario } = req.body
-      const novaAvaliacao = new AvaliacaoProduto({
-        idProduto,
-        idUsuario,
-        nota,
-        comentario
-      })
-      await novaAvaliacao.save()
+      const idUsuario = req.user?.id
+      const idProduto = req.params.id
+      const { nota, comentario } = req.body
+
+      if (!idUsuario) {
+        res.status(401).json({ error: 'Usuário não autenticado' })
+        return
+      }
+
+      const notaNumber = Number(nota)
+      if (isNaN(notaNumber) || notaNumber < 1 || notaNumber > 5) {
+        res.status(400).json({ error: 'Nota inválida' })
+        return
+      }
+
+      const novaAvaliacao = {
+        idUsuario: new mongoose.Types.ObjectId(idUsuario),
+        nota: notaNumber,
+        comentario: comentario ? String(comentario) : ''
+      }
+
+      const produto = await Produto.findById(idProduto)
+      if (!produto) {
+        res.status(404).json({ error: 'Produto não encontrado' })
+        return
+      }
+      produto.avaliacoes = produto.avaliacoes || []
+      produto.avaliacoes.push(novaAvaliacao)
+      await produto.save()
       res.status(201).json({ avaliacao: novaAvaliacao })
     } catch (error) {
       res.status(500).json({ error: 'Erro ao criar avaliação' })
