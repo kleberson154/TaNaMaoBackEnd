@@ -128,6 +128,18 @@ class UserController {
     }
   }
 
+  async getAllProdutos(
+    req: AuthRequest,
+    res: Response
+  ): Promise<Response | void> {
+    try {
+      const produtos = await Produto.find()
+      res.status(200).json({ produtos })
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao buscar produtos' })
+    }
+  }
+
   async createProduto(
     req: AuthRequest,
     res: Response

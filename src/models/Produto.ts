@@ -10,6 +10,7 @@ export interface IProduto extends Document {
   quantidade: number
   descricao: string
   imagemUrl: string
+  quantidadeVendida?: number
   avaliacoes?: Array<{
     idUsuario: mongoose.Types.ObjectId
     nota: number
@@ -27,6 +28,7 @@ const produtoSchema: Schema = new Schema(
     quantidade: { type: Number, required: true },
     descricao: { type: String, required: true },
     imagemUrl: { type: String, required: true },
+    quantidadeVendida: { type: Number, default: 0 },
     avaliacoes: [
       {
         idUsuario: { type: mongoose.Types.ObjectId, required: true },

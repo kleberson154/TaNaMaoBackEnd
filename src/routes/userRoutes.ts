@@ -5,7 +5,9 @@ import { authMiddleware } from '../middlewares/authMiddleware'
 
 const router: Router = Router()
 
-router.get('/', async (req, res) => {})
+router.get('/', async (req, res) => {
+  await UserController.getAllProdutos(req, res)
+})
 
 router.post('/cadastro', async (req, res) => {
   await UserController.register(req, res)
