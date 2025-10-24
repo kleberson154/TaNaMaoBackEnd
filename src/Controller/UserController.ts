@@ -1,7 +1,7 @@
 import { Response } from 'express'
 import { AuthRequest } from '../types/express'
 import User, { IUser } from '../models/User'
-import jwt from 'jsonwebtoken'
+import * as jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 import Produto from '../models/Produto'
 
@@ -36,8 +36,11 @@ class UserController {
 
       await newUser.save()
 
-      const { password, ...userData } = newUser.toObject()
-      res.status(201).json(userData)
+      const userObj = (newUser as any).toObject
+        ? (newUser as any).toObject()
+        : (newUser as any)
+      delete userObj.senha
+      res.status(201).json(userObj)
     } catch (error) {
       res.status(500).json({ error: 'Erro ao registrar usuário' })
     }
@@ -45,35 +48,163 @@ class UserController {
 
   async login(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
+      // aceitar 'senha' ou 'password' no body
       const { email, senha } = req.body
-      const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'
 
       const user = await User.findOne({ email })
-      if (!user) {
-        res.status(401).json({ error: 'Credenciais inválidas' })
-        return
-      }
+      if (!user) return res.status(401).json({ error: 'Credenciais inválidas' })
 
       const isMatch = await (user as any).comparePassword(senha)
-      if (!isMatch) {
-        res.status(401).json({ error: 'Credenciais inválidas' })
-        return
-      }
+      if (!isMatch)
+        return res.status(401).json({ error: 'Credenciais inválidas' })
 
-      const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
-        expiresIn: '24h'
+      const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'
+      const REFRESH_SECRET =
+        process.env.JWT_REFRESH_SECRET || 'your_refresh_jwt_secret'
+
+      // criar access token (curta duração)
+      const accessToken = (jwt as any).sign(
+        { id: user._id, email: user.email },
+        JWT_SECRET,
+        {
+          expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m'
+        }
+      )
+
+      // criar refresh token (longa duração)
+      const refreshToken = (jwt as any).sign(
+        { id: user._id, email: user.email },
+        REFRESH_SECRET,
+        {
+          expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d'
+        }
+      )
+
+      // persistir refresh token no usuário
+      user.refreshTokens = user.refreshTokens || []
+      user.refreshTokens.push(refreshToken)
+      await user.save()
+
+      // setar cookie HttpOnly com o refresh token
+      const maxAge = 7 * 24 * 60 * 60 * 1000 // 7 dias em ms; ajustar conforme REFRESH_TOKEN_EXPIRES_IN
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge
       })
 
-      const { senha: _, ...safeUser } = user.toObject()
-      res.status(200).json({ user: safeUser, token })
+      const userObj = (user as any).toObject
+        ? (user as any).toObject()
+        : (user as any)
+      delete userObj.senha
+
+      return res.status(200).json({ accessToken, user: userObj })
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao fazer login' })
+      const msg = (error as Error)?.message || String(error)
+      return res.status(500).json({ error: 'Erro ao fazer login: ' + msg })
+    }
+  }
+
+  async refreshToken(
+    req: AuthRequest,
+    res: Response
+  ): Promise<Response | void> {
+    try {
+      const token = req.cookies?.refreshToken || req.headers['x-refresh-token']
+      if (!token)
+        return res.status(401).json({ error: 'Refresh token não fornecido' })
+
+      const REFRESH_SECRET =
+        process.env.JWT_REFRESH_SECRET || 'your_refresh_jwt_secret'
+
+      let payload: any
+      try {
+        payload = jwt.verify(token, REFRESH_SECRET) as any
+      } catch (err) {
+        return res.status(401).json({ error: 'Refresh token inválido' })
+      }
+
+      const user = await User.findById(payload.id)
+      if (!user || !user.refreshTokens || !user.refreshTokens.includes(token)) {
+        return res.status(401).json({ error: 'Sessão inválida' })
+      }
+
+      // emitir novo access token
+      const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'
+      const accessToken = (jwt as any).sign(
+        { id: user._id, email: user.email },
+        JWT_SECRET,
+        {
+          expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m'
+        }
+      )
+
+      // opcional: rotação de refresh token (emitir novo e remover o antigo)
+      const rotate = process.env.ROTATE_REFRESH_TOKENS === 'true'
+      if (rotate) {
+        const REFRESH_SECRET2 = REFRESH_SECRET
+        const newRefresh = (jwt as any).sign(
+          { id: user._id, email: user.email },
+          REFRESH_SECRET2,
+          {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d'
+          }
+        )
+        // substituir token antigo pelo novo
+        user.refreshTokens = (user.refreshTokens || []).filter(
+          (t: string) => t !== token
+        )
+        user.refreshTokens.push(newRefresh)
+        await user.save()
+        const maxAge = 7 * 24 * 60 * 60 * 1000
+        res.cookie('refreshToken', newRefresh, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge
+        })
+      }
+
+      return res.status(200).json({ accessToken })
+    } catch (error) {
+      const msg = (error as Error)?.message || String(error)
+      return res
+        .status(500)
+        .json({ error: 'Erro ao gerar novo access token: ' + msg })
+    }
+  }
+
+  async logout(req: AuthRequest, res: Response): Promise<Response | void> {
+    try {
+      const token = req.cookies?.refreshToken
+      if (!token) {
+        // limpar cookie mesmo assim
+        res.clearCookie('refreshToken', { path: '/' })
+        return res.status(200).json({ ok: true })
+      }
+
+      // encontrar usuário e remover o refresh token da lista
+      const user = await User.findOne({ refreshTokens: token })
+      if (user) {
+        user.refreshTokens = (user.refreshTokens || []).filter(
+          (t: string) => t !== token
+        )
+        await user.save()
+      }
+
+      res.clearCookie('refreshToken', { path: '/' })
+      return res.status(200).json({ ok: true })
+    } catch (error) {
+      return res.status(500).json({ error: 'Erro ao deslogar' })
     }
   }
 
   async getUserData(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
-      const user = await User.findById(req.user!.id).select('-password')
+      const user = await User.findById(req.user!.id).select('-senha')
       if (!user) {
         res.status(404).json({ error: 'Usuário não encontrado' })
         return
