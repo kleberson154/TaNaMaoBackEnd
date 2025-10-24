@@ -1,6 +1,7 @@
 import express, { Application } from 'express'
 import mongoose from 'mongoose'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 import dotenv from 'dotenv'
 import userRoutes from './routes/userRoutes'
 
@@ -11,12 +12,13 @@ const app: Application = express()
 // Middleware
 app.use(
   cors({
-    origin: ['https://localhost:3000 ', 'http://localhost:3000'],
+    origin: ['https://localhost:3000', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
   })
 )
 app.use(express.json())
+app.use(cookieParser())
 
 // Conexão com o MongoDB
 mongoose

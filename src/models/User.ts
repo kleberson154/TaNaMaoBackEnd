@@ -28,6 +28,7 @@ export interface IUser extends Document {
   produtosCriados?: Array<{
     idProduto: mongoose.Types.ObjectId
   }>
+  refreshTokens?: string[]
 }
 
 // Criação do schema
@@ -67,7 +68,8 @@ const userSchema: Schema = new Schema(
       {
         idProduto: { type: mongoose.Types.ObjectId, required: true }
       }
-    ]
+    ],
+    refreshTokens: { type: [String], default: [] }
   },
   { timestamps: true }
 )
