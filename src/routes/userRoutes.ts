@@ -17,26 +17,17 @@ router.post('/login', async (req, res) => {
   await UserController.login(req, res)
 })
 
-router.get(
-  '/perfil',
-  authMiddleware,
-  async (req: Request & { user?: { id?: string } }, res) => {
-    const userId = req.user?.id
-    if (!userId) {
-      return res.status(401).json({ error: 'Usuário não autenticado' })
-    }
+router.post('/refresh', async (req, res) => {
+  await UserController.refreshToken(req, res)
+})
 
-    try {
-      const user: IUser | null = await User.findById(userId).select('-senha')
-      if (!user) {
-        return res.status(404).json({ error: 'Usuário não encontrado' })
-      }
-      res.status(200).json({ user })
-    } catch (error) {
-      res.status(500).json({ error: 'Erro ao buscar dados do usuário' })
-    }
-  }
-)
+router.post('/logout', async (req, res) => {
+  await UserController.logout(req, res)
+})
+
+router.get('/perfil', authMiddleware, async (req, res) => {
+  await UserController.getUserData(req as any, res)
+})
 
 router.get('/produtos/:id', async (req, res) => {
   await UserController.getProduto(req, res)
