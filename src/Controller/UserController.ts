@@ -186,12 +186,10 @@ class UserController {
         return res.status(200).json({ ok: true })
       }
 
-      // encontrar usuário e remover o refresh token da lista
+      // encontrar usuário e limpar toda a lista de refresh tokens
       const user = await User.findOne({ refreshTokens: token })
       if (user) {
-        user.refreshTokens = (user.refreshTokens || []).filter(
-          (t: string) => t !== token
-        )
+        user.refreshTokens = []
         await user.save()
       }
 
