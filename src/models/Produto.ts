@@ -1,13 +1,11 @@
-import { time } from 'console'
 import mongoose, { Document, Schema } from 'mongoose'
 
 export interface IProduto extends Document {
   idVendedor: mongoose.Types.ObjectId
   nome: string
   categoria: string
-  precoCompra: number
-  precoAluguel: number
-  quantidade: number
+  tipoVenda: number
+  preco: number
   descricao: string
   imagemUrl: string
   quantidadeVendida?: number
@@ -23,9 +21,8 @@ const produtoSchema: Schema = new Schema(
     idVendedor: { type: mongoose.Types.ObjectId, required: true },
     nome: { type: String, required: true },
     categoria: { type: String, required: true },
-    precoCompra: { type: Number, required: true },
-    precoAluguel: { type: Number, required: true },
-    quantidade: { type: Number, required: true },
+    tipoVenda: { type: String, required: true },
+    preco: { type: Number, required: true },
     descricao: { type: String, required: true },
     imagemUrl: { type: String, required: true },
     quantidadeVendida: { type: Number, default: 0 },

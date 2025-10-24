@@ -146,22 +146,14 @@ class UserController {
   ): Promise<Response | void> {
     const idVendedor = req.user?.id
     try {
-      const {
-        nome,
-        categoria,
-        precoCompra,
-        precoAluguel,
-        quantidade,
-        descricao,
-        imagemUrl
-      } = req.body
+      const { nome, categoria, tipoVenda, preco, descricao, imagemUrl } =
+        req.body
       const novoProduto = new Produto({
         idVendedor,
         nome,
         categoria,
-        precoCompra,
-        precoAluguel,
-        quantidade,
+        tipoVenda,
+        preco,
         descricao,
         imagemUrl
       })
