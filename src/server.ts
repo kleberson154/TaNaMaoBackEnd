@@ -12,7 +12,11 @@ const app: Application = express()
 // Middleware
 app.use(
   cors({
-    origin: ['https://localhost:3000', 'http://localhost:3000'],
+    origin: [
+      'https://localhost:3000',
+      'http://localhost:3000',
+      'https://tanamaosenac.vercel.app/'
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
