@@ -370,6 +370,99 @@ class UserController {
       res.status(500).json({ error: 'Erro ao criar avaliação' })
     }
   }
+
+  async addToCart(req: AuthRequest, res: Response): Promise<Response | void> {
+    try {
+      const userId = req.user?.id
+      const { idProduto, quantidade } = req.body
+      if (!userId) {
+        res.status(401).json({ error: 'Usuário não autenticado' })
+        return
+      }
+      const user = await User.findById(userId)
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' })
+        return
+      }
+      if (user.carrinho && user.carrinho.length) {
+        const existing = user.carrinho.find(
+          item => item.idProduto.toString() === String(idProduto)
+        )
+        if (existing) {
+          const add = Number(quantidade) || 1
+          existing.quantidade = (Number(existing.quantidade) || 0) + add
+          await user.save()
+          return res.status(200).json({ carrinho: user.carrinho })
+        }
+      }
+      user.carrinho = user.carrinho || []
+      user.carrinho.push({ idProduto, quantidade })
+      await user.save()
+      res.status(200).json({ carrinho: user.carrinho })
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: 'Erro ao adicionar item ao carrinho' + error })
+    }
+  }
+
+  async removeCartItem(
+    req: AuthRequest,
+    res: Response
+  ): Promise<Response | void> {
+    try {
+      const userId = req.user?.id
+      const { idProduto } = req.body
+      if (!userId) {
+        res.status(401).json({ error: 'Usuário não autenticado' })
+        return
+      }
+      const user = await User.findById(userId)
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' })
+        return
+      }
+      const removeQty = Math.max(1, Number(req.body.quantidade) || 1)
+      user.carrinho = user.carrinho || []
+      const itemIndex = user.carrinho.findIndex(
+        item => item.idProduto.toString() === String(idProduto)
+      )
+      if (itemIndex !== -1) {
+        const existing = user.carrinho[itemIndex]
+        const currentQty = Number(existing.quantidade) || 0
+        const newQty = currentQty - removeQty
+        if (newQty > 0) {
+          user.carrinho[itemIndex].quantidade = newQty
+        } else {
+          user.carrinho.splice(itemIndex, 1)
+        }
+      }
+      await user.save()
+      res.status(200).json({ carrinho: user.carrinho })
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: 'Erro ao remover item do carrinho' + error })
+    }
+  }
+
+  async getCart(req: AuthRequest, res: Response): Promise<Response | void> {
+    try {
+      const userId = req.user?.id
+      if (!userId) {
+        res.status(401).json({ error: 'Usuário não autenticado' })
+        return
+      }
+      const user = await User.findById(userId)
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' })
+        return
+      }
+      res.status(200).json({ carrinho: user.carrinho })
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao buscar carrinho' })
+    }
+  }
 }
 
 export default new UserController()

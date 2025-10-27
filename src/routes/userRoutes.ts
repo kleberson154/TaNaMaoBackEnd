@@ -49,4 +49,16 @@ router.post('/produtos/:id/avaliacoes', authMiddleware, async (req, res) => {
   await UserController.createAvaliacao(req, res)
 })
 
+router.post('/carrinho', authMiddleware, async (req, res) => {
+  await UserController.addToCart(req as any, res)
+})
+
+router.delete('/carrinho', authMiddleware, async (req, res) => {
+  await UserController.removeCartItem(req as any, res)
+})
+
+router.get('/carrinho', authMiddleware, async (req, res) => {
+  await UserController.getCart(req as any, res)
+})
+
 export default router
