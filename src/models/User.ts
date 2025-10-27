@@ -7,14 +7,14 @@ export interface IUser extends Document {
   email: string
   senha: string
   cpf: string
-  endereco?: {
+  endereco?: Array<{
     telefone: string
     cep: string
     rua: string
-    numero: string
+    complemento: string
     cidade: string
     estado: string
-  }
+  }>
   carrinho?: Array<{
     idProduto: mongoose.Types.ObjectId
     quantidade: number
@@ -38,14 +38,16 @@ const userSchema: Schema = new Schema(
     email: { type: String, required: true, unique: true },
     senha: { type: String, required: true },
     cpf: { type: String, required: true },
-    endereco: {
-      telefone: { type: String },
-      cep: { type: String },
-      rua: { type: String },
-      numero: { type: String },
-      cidade: { type: String },
-      estado: { type: String }
-    },
+    endereco: [
+      {
+        telefone: { type: String },
+        cep: { type: String },
+        rua: { type: String },
+        numero: { type: String },
+        cidade: { type: String },
+        estado: { type: String }
+      }
+    ],
     carrinho: [
       {
         idProduto: { type: mongoose.Types.ObjectId, required: true },

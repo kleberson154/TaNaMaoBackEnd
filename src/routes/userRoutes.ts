@@ -29,6 +29,10 @@ router.get('/perfil', authMiddleware, async (req, res) => {
   await UserController.getUserData(req as any, res)
 })
 
+router.put('/perfil', authMiddleware, async (req, res) => {
+  await UserController.updateUserData(req as any, res)
+})
+
 router.get('/produtos/:id', async (req, res) => {
   await UserController.getProduto(req, res)
 })

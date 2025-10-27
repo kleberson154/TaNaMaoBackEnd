@@ -213,6 +213,44 @@ class UserController {
     }
   }
 
+  async updateUserData(
+    req: AuthRequest,
+    res: Response
+  ): Promise<Response | void> {
+    try {
+      const user = await User.findById(req.user!.id)
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' })
+        return
+      }
+
+      // atualizar dados do usuário
+      const {
+        nome,
+        email,
+        endereco: { telefone, cep, rua, complemento, cidade, estado }
+      } = req.body
+      user.email = email
+      user.nome = nome
+      user.endereco = [
+        {
+          telefone,
+          cep,
+          rua,
+          complemento,
+          cidade,
+          estado
+        }
+      ]
+
+      await user.save()
+
+      res.status(200).json({ user })
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao atualizar dados do usuário' })
+    }
+  }
+
   async getSearch(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
       // accept query from query string or route params
@@ -289,7 +327,7 @@ class UserController {
       await novoProduto.save()
       res.status(201).json({ produto: novoProduto })
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao criar produto' })
+      res.status(500).json({ error: 'Erro ao criar produto: ' + error })
     }
   }
 
