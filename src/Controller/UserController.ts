@@ -472,6 +472,18 @@ class UserController {
         produtos: user.carrinho,
         status: 'preparando'
       }
+      for (const item of user.carrinho) {
+        const produto = await Produto.findById(item.idProduto)
+        if (!produto) {
+          res
+            .status(404)
+            .json({ error: `Produto com id ${item.idProduto} não encontrado` })
+          return
+        }
+        produto.quantidadeVendida =
+          (produto.quantidadeVendida || 0) + item.quantidade
+        await produto.save()
+      }
       user.pedidos = user.pedidos || []
       user.pedidos.push(novoPedido as any)
       // Limpar o carrinho do usuário
