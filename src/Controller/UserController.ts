@@ -167,18 +167,18 @@ class UserController {
     try {
       const token =
         (req.headers['x-refresh-token'] as string) || req.body?.refreshToken
-      if (!token) return res.status(200).json({ ok: true })
+      if (!token)
+        return res.status(200).json({ ok: true, message: 'No token provided' })
 
-      // encontrar usuário e remover apenas o token fornecido
       const user = await User.findOne({ refreshTokens: token })
       if (user) {
-        user.refreshTokens = (user.refreshTokens || []).filter(
-          (t: string) => t !== token
-        )
+        user.refreshTokens = []
         await user.save()
       }
 
-      return res.status(200).json({ ok: true })
+      return res
+        .status(200)
+        .json({ ok: true, message: 'Logged out successfully' })
     } catch (error) {
       return res.status(500).json({ error: 'Erro ao deslogar' })
     }

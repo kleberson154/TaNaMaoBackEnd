@@ -21,7 +21,7 @@ router.post('/refresh', async (req, res) => {
   await UserController.refreshToken(req, res)
 })
 
-router.post('/logout', authMiddleware, async (req, res) => {
+router.post('/logout', async (req, res) => {
   await UserController.logout(req, res)
 })
 
