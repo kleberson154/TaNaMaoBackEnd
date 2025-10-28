@@ -208,27 +208,30 @@ class UserController {
         return
       }
 
-      // atualizar dados do usuário
-      const {
-        nome,
-        email,
-        endereco: { telefone, cep, rua, complemento, cidade, estado }
-      } = req.body
-      user.email = email
-      user.nome = nome
-      user.endereco = [
-        {
-          telefone,
-          cep,
-          rua,
-          complemento,
-          cidade,
-          estado
+      const { nome, email, endereco } = req.body
+      if (email) user.email = email
+      if (nome) user.nome = nome
+
+      if (endereco && typeof endereco === 'object') {
+        const src = Array.isArray(endereco) ? endereco[0] || {} : endereco
+        const { telefone, cep, rua, numero, cidade, estado } = src
+
+        const novoEndereco = {
+          telefone: telefone,
+          cep: cep,
+          rua: rua,
+          numero: numero,
+          cidade: cidade,
+          estado: estado
         }
-      ]
 
+        if (user.endereco && user.endereco.length > 0) {
+          user.endereco[0] = novoEndereco as any
+        } else {
+          user.endereco = [novoEndereco as any]
+        }
+      }
       await user.save()
-
       res.status(200).json({ user })
     } catch (error) {
       res.status(500).json({ error: 'Erro ao atualizar dados do usuário' })
