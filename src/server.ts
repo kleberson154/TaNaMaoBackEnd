@@ -9,20 +9,23 @@ dotenv.config()
 const app: Application = express()
 
 // Middleware
-app.use(
-  cors({
-    origin: [
-      'http://localhost:3000',
-      'https://localhost:3000',
-      'https://tanamaosenac.vercel.app',
-      'https://tanamaobackend.onrender.com'
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: false,
-    optionsSuccessStatus: 200
-  })
-)
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://localhost:3000',
+    'https://tanamaosenac.vercel.app',
+    'https://tanamaobackend.onrender.com'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
+  optionsSuccessStatus: 200
+}
+
+app.use(cors(corsOptions))
+// Ensure preflight (OPTIONS) requests get CORS headers
+app.options('*', cors(corsOptions))
+
 app.use(express.json())
 
 // Conexão com o MongoDB
