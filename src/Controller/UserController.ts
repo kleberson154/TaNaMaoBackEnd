@@ -197,6 +197,19 @@ class UserController {
     }
   }
 
+  async getUserById(req: AuthRequest, res: Response): Promise<Response | void> {
+    try {
+      const user = await User.findById(req.params.id).select('-senha')
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' })
+        return
+      }
+      res.status(200).json({ user })
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao buscar dados do usuário' })
+    }
+  }
+
   async updateUserData(
     req: AuthRequest,
     res: Response
