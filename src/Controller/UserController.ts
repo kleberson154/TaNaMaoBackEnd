@@ -269,6 +269,22 @@ class UserController {
     }
   }
 
+  async getPerCategory(
+    req: AuthRequest,
+    res: Response
+  ): Promise<Response | void> {
+    try {
+      const { category } = req.params
+      const produtos = await Produto.find({ categoria: category })
+      res.status(200).json({ produtos })
+    } catch (error) {
+      const msg = (error as Error)?.message || String(error)
+      res
+        .status(500)
+        .json({ error: 'Erro ao buscar produtos por categoria: ' + msg })
+    }
+  }
+
   async getProduto(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
       const produto = await Produto.findById(req.params.id)

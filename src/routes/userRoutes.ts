@@ -41,6 +41,10 @@ router.get('/produtos/busca/:query', async (req, res) => {
   await UserController.getSearch(req, res)
 })
 
+router.get('/produtos/categoria/:category', async (req, res) => {
+  await UserController.getPerCategory(req, res)
+})
+
 router.post('/produtos', authMiddleware, async (req, res) => {
   await UserController.createProduto(req, res)
 })
