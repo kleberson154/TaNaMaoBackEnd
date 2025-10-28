@@ -312,7 +312,7 @@ class UserController {
         imagemUrl
       })
       await novoProduto.save()
-      res.status(201).json({ produto: novoProduto })
+      res.status(201).json({ produto: novoProduto, status: 'created' })
     } catch (error) {
       res.status(500).json({ error: 'Erro ao criar produto: ' + error })
     }
@@ -448,6 +448,38 @@ class UserController {
       res.status(200).json({ carrinho: user.carrinho })
     } catch (error) {
       res.status(500).json({ error: 'Erro ao buscar carrinho' })
+    }
+  }
+
+  async createOrder(req: AuthRequest, res: Response): Promise<Response | void> {
+    try {
+      const userId = req.user?.id
+      if (!userId) {
+        res.status(401).json({ error: 'Usuário não autenticado' })
+        return
+      }
+      const user = await User.findById(userId)
+      if (!user) {
+        res.status(404).json({ error: 'Usuário não encontrado' })
+        return
+      }
+      if (!user.carrinho || user.carrinho.length === 0) {
+        res.status(400).json({ error: 'Carrinho vazio' })
+        return
+      }
+      // Criar um novo pedido
+      const novoPedido = {
+        produtos: user.carrinho,
+        status: 'preparando'
+      }
+      user.pedidos = user.pedidos || []
+      user.pedidos.push(novoPedido as any)
+      // Limpar o carrinho do usuário
+      user.carrinho = []
+      await user.save()
+      res.status(201).json({ pedido: novoPedido, status: 'created' })
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao criar pedido' })
     }
   }
 }

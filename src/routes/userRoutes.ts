@@ -61,4 +61,8 @@ router.get('/carrinho', authMiddleware, async (req, res) => {
   await UserController.getCart(req as any, res)
 })
 
+router.post('/pedidos', authMiddleware, async (req, res) => {
+  await UserController.createOrder(req as any, res)
+})
+
 export default router

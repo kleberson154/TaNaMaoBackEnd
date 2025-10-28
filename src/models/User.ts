@@ -20,9 +20,10 @@ export interface IUser extends Document {
     quantidade: number
   }>
   pedidos?: Array<{
-    idVendedor: mongoose.Types.ObjectId
-    idProduto: mongoose.Types.ObjectId
-    quantidade: number
+    produtos: Array<{
+      idProduto: mongoose.Types.ObjectId
+      quantidade: number
+    }>
     status: 'preparando' | 'enviado' | 'concluido'
   }>
   produtosCriados?: Array<{
@@ -56,9 +57,12 @@ const userSchema: Schema = new Schema(
     ],
     pedidos: [
       {
-        idVendedor: { type: mongoose.Types.ObjectId, required: true },
-        idProduto: { type: mongoose.Types.ObjectId, required: true },
-        quantidade: { type: Number, required: true },
+        produtos: [
+          {
+            idProduto: { type: mongoose.Types.ObjectId, required: true },
+            quantidade: { type: Number, required: true }
+          }
+        ],
         status: {
           type: String,
           enum: ['preparando', 'enviado', 'concluido'],
