@@ -1,7 +1,6 @@
 import express, { Application } from 'express'
 import mongoose from 'mongoose'
 import cors from 'cors'
-import cookieParser from 'cookie-parser'
 import dotenv from 'dotenv'
 import userRoutes from './routes/userRoutes'
 
@@ -13,17 +12,18 @@ const app: Application = express()
 app.use(
   cors({
     origin: [
-      'https://localhost:3000',
       'http://localhost:3000',
-      'https://tanamaosenac.vercel.app'
+      'https://localhost:3000',
+      'https://tanamaosenac.vercel.app',
+      'https://tanamaobackend.onrender.com'
     ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    credentials: false,
+    optionsSuccessStatus: 200
   })
 )
 app.use(express.json())
-app.use(cookieParser())
 
 // Conexão com o MongoDB
 mongoose

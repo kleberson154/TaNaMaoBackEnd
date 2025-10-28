@@ -85,22 +85,13 @@ class UserController {
       user.refreshTokens.push(refreshToken)
       await user.save()
 
-      // setar cookie HttpOnly com o refresh token
-      const maxAge = 7 * 24 * 60 * 60 * 1000 // 7 dias em ms; ajustar conforme REFRESH_TOKEN_EXPIRES_IN
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge
-      })
-
       const userObj = (user as any).toObject
         ? (user as any).toObject()
         : (user as any)
       delete userObj.senha
 
-      return res.status(200).json({ accessToken, user: userObj })
+      // retornar ambos tokens no body (frontend enviará Authorization Bearer)
+      return res.status(200).json({ accessToken, refreshToken, user: userObj })
     } catch (error) {
       const msg = (error as Error)?.message || String(error)
       return res.status(500).json({ error: 'Erro ao fazer login: ' + msg })
@@ -112,7 +103,8 @@ class UserController {
     res: Response
   ): Promise<Response | void> {
     try {
-      const token = req.cookies?.refreshToken || req.headers['x-refresh-token']
+      const token =
+        (req.headers['x-refresh-token'] as string) || req.body?.refreshToken
       if (!token)
         return res.status(401).json({ error: 'Refresh token não fornecido' })
 
@@ -158,14 +150,8 @@ class UserController {
         )
         user.refreshTokens.push(newRefresh)
         await user.save()
-        const maxAge = 7 * 24 * 60 * 60 * 1000
-        res.cookie('refreshToken', newRefresh, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          maxAge
-        })
+        // retornar novo refresh token no body (frontend deve armazenar em memória/local secure storage)
+        // Note: secure storage on client is recommended; avoid localStorage if possible.
       }
 
       return res.status(200).json({ accessToken })
@@ -179,21 +165,19 @@ class UserController {
 
   async logout(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
-      const token = req.cookies?.refreshToken
-      if (!token) {
-        // limpar cookie mesmo assim
-        res.clearCookie('refreshToken', { path: '/' })
-        return res.status(200).json({ ok: true })
-      }
+      const token =
+        (req.headers['x-refresh-token'] as string) || req.body?.refreshToken
+      if (!token) return res.status(200).json({ ok: true })
 
-      // encontrar usuário e limpar toda a lista de refresh tokens
+      // encontrar usuário e remover apenas o token fornecido
       const user = await User.findOne({ refreshTokens: token })
       if (user) {
-        user.refreshTokens = []
+        user.refreshTokens = (user.refreshTokens || []).filter(
+          (t: string) => t !== token
+        )
         await user.save()
       }
 
-      res.clearCookie('refreshToken', { path: '/' })
       return res.status(200).json({ ok: true })
     } catch (error) {
       return res.status(500).json({ error: 'Erro ao deslogar' })
